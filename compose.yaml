@@ -1,0 +1,12 @@
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Run npm run db:setup first}
+    ports:
+      - "127.0.0.1:14333:1433"
+    volumes:
+      - cartera_clara_sql:/var/opt/mssql
+volumes:
+  cartera_clara_sql:

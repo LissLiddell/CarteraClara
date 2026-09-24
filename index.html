@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e9e3d7" />
+    <title>Cartera Clara · Demo de cobranza</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Ir al contenido</a>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Panel de navegación de la demo">
+        <div class="brand" aria-label="Cartera Clara">
+          <span class="brand-mark" aria-hidden="true">c.</span>
+          <span>Cartera<br /><em>Clara</em></span>
+        </div>
+
+        <div class="sidebar-body">
+          <section class="sidebar-section portfolio-panel" aria-labelledby="portfolio-heading">
+            <div class="portfolio-head">
+              <div>
+                <p class="rail-label">ESPACIO DE TRABAJO</p>
+                <h2 id="portfolio-heading">La cartera</h2>
+              </div>
+              <span id="case-count" class="portfolio-count" aria-label="Número de cuentas">0</span>
+            </div>
+            <p id="case-summary" class="portfolio-summary"></p>
+            <div id="case-list" class="case-list" role="group" aria-label="Seleccionar expediente"></div>
+          </section>
+
+          <section class="sidebar-section" aria-label="Etapas del caso">
+            <p class="rail-label">RUTA DEL CASO</p>
+            <div id="flow-progress"></div>
+          </section>
+
+          <div class="sidebar-section persona">
+            <label class="rail-label" for="role-select">CAMBIAR PERSPECTIVA</label>
+            <select id="role-select">
+              <option value="supervisor">Supervisora · Elena</option>
+              <option value="lia">Agente · Lía</option>
+              <option value="marco">Agente · Marco</option>
+              <option value="finance">Finanzas · Vera</option>
+            </select>
+            <small>El selector permite recorrer roles; no reemplaza un inicio de sesión real.</small>
+          </div>
+
+          <div class="sidebar-section date-preview">
+            <label class="rail-label" for="preview-date">SIMULAR FECHA DE CONSULTA</label>
+            <input id="preview-date" type="date" aria-describedby="preview-date-help" />
+            <button type="button" id="use-today" class="text-button" hidden>Volver a hoy ↺</button>
+            <small id="preview-date-help">Solo adelanta la vista de vencimientos; no cambia el reloj ni los movimientos guardados.</small>
+          </div>
+        </div>
+
+        <div class="sidebar-bottom">
+          <span class="demo-flag">● DEMO · DATOS FICTICIOS</span>
+          <button type="button" id="prepare-overdue" class="text-button" hidden>Preparar caso vencido de prueba ↗</button>
+          <button type="button" id="reset-demo" class="text-button">Reiniciar datos de ejemplo ↺</button>
+        </div>
+      </aside>
+
+      <main id="main" class="workspace">
+        <header class="workspace-header">
+          <div>
+            <p class="eyebrow">MESA DE COBRANZA / PRIMER FLUJO</p>
+            <h1 id="page-title">Expediente de cobro<span class="heading-period">.</span></h1>
+            <p class="lede">Asignar, conversar y registrar cada peso sin perder el hilo.</p>
+          </div>
+          <span class="workspace-edition">EDICIÓN 01 / DEMO</span>
+        </header>
+
+        <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+        <div id="app"></div>
+
+        <footer class="footer">Demo con base de datos local · no envía mensajes ni procesa pagos reales.</footer>
+      </main>
+    </div>
+  </body>
+</html>

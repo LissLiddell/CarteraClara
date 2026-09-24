@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+.tools/
+.vs/
+node_modules/
+*.log
+TestResults/
+api/bin/
+api/obj/
