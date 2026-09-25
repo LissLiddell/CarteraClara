@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Threading.RateLimiting;
 using CarteraClara.Api;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -9,13 +10,47 @@ builder.Logging.AddConsole();
 var connection = builder.Configuration.GetConnectionString("CarteraClara")
     ?? throw new InvalidOperationException("Falta ConnectionStrings__CarteraClara. Ejecuta npm run db:setup y npm run db:up.");
 builder.Services.AddDbContext<CarteraDb>(options => options.UseSqlServer(connection));
+builder.Services.AddRateLimiter(options =>
+{
+    // A shared daily ceiling protects the demo even if requests come from many IPs.
+    // App restarts reset this in-memory counter; the cloud free-tier quotas remain the cost backstop.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/api/health")
+            ? RateLimitPartition.GetFixedWindowLimiter("demo-daily", _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Environment.IsDevelopment() ? int.MaxValue : 1000,
+                Window = TimeSpan.FromDays(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            })
+            : RateLimitPartition.GetNoLimiter("public-static"));
+    options.AddPolicy("demo-api", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = builder.Environment.IsDevelopment() ? int.MaxValue : 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, _) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = "La demo llegó a su límite temporal de solicitudes. Inténtalo más tarde."
+        });
+    };
+});
 
 var app = builder.Build();
 await InitializeDatabase(app);
+app.UseRouting();
+app.UseRateLimiter();
 
-app.MapGet("/api/health", async (CarteraDb db) => await db.Database.CanConnectAsync()
-    ? Results.Ok(new { status = "ok" })
-    : Results.Json(new { status = "database_unavailable" }, statusCode: 503));
+// Liveness does not query SQL: automated health probes cannot consume database quota.
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 
 app.MapGet("/api/state", async (string actor, string? asOf, CarteraDb db) =>
 {
@@ -65,7 +100,7 @@ app.MapGet("/api/state", async (string actor, string? asOf, CarteraDb db) =>
             events = account.Events.OrderByDescending(x => x.Sequence).Select(x => new { x.Id, x.Sequence, x.Type, x.Kind, x.ActorId, x.ActorName, x.At, x.Detail })
         })
     });
-});
+}).RequireRateLimiting("demo-api");
 
 app.MapPost("/api/actions", async (ActionRequest action, CarteraDb db) =>
 {
@@ -287,7 +322,7 @@ app.MapPost("/api/actions", async (ActionRequest action, CarteraDb db) =>
             ? Results.Conflict(new { message = "Esa referencia ya fue registrada; no dupliques el abono." })
             : Results.Conflict(new { message = "Otra persona actualizó la cuenta. Recarga antes de continuar." });
     }
-});
+}).RequireRateLimiting("demo-api");
 
 if (app.Environment.IsDevelopment())
 {

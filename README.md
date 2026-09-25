@@ -47,6 +47,12 @@ Con la API encendida y **solo si las tres cuentas siguen limpias**, `npm run tes
 
 El selector de rol es solo para recorrer la demo. No es autenticación real: cualquiera con acceso a la demo puede elegir un rol. La API vuelve a validar las reglas, además de ocultar controles no permitidos en la interfaz.
 
+## Límites de la demo pública
+
+En un despliegue fuera de desarrollo, la API permite como máximo 30 solicitudes por minuto por dirección IP observada por el servidor y 1,000 solicitudes a `/api` por día entre todos los visitantes. Al alcanzar el límite responde HTTP 429 sin consultar ni modificar SQL. Los archivos estáticos y `/api/health` no consumen el contador de SQL; la ruta de salud solo confirma que el proceso responde, **no** que la base está disponible. En desarrollo local estos límites no estorban las pruebas.
+
+Los contadores viven en memoria: se reinician cuando la aplicación se reinicia y no son una garantía absoluta contra abuso ni un límite de facturación. Además, detrás de un proxy, varios visitantes podrían compartir la IP que observa la aplicación. La demo sigue siendo abierta y compartida: cualquiera puede cambiar las **cuentas ficticias**; nunca cargues información real. Para evitar cargos de nube, el despliegue debe usar exclusivamente un plan gratuito de aplicación y la oferta gratuita de Azure SQL con la opción **Auto-pause the database until next month** cuando se agote su cuota. Si alguna de esas opciones no aparece claramente como gratuita, detener la creación y revisar antes de confirmar. Un presupuesto de Azure solo alerta: no detiene el consumo.
+
 ## Qué persiste y qué sigue fuera
 
 La API ASP.NET Core guarda cuentas, contactos, promesas, abonos y bitácora en tablas relacionadas. La migración inicial está en `api/Migrations`. Cada operación actualiza el expediente y la bitácora en una sola transacción; SQL Server impide referencias de abono duplicadas y su `rowversion` detecta cambios simultáneos en la misma cuenta. Los importes se guardan como centavos enteros.
