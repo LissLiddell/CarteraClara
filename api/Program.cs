@@ -326,44 +326,6 @@ app.MapPost("/api/actions", async (ActionRequest action, CarteraDb db) =>
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapPost("/api/demo/overdue-case", async (CarteraDb db) =>
-    {
-        const string id = "CC-107";
-        if (await db.Accounts.AnyAsync(x => x.Id == id)) return Results.Ok(new { accountId = id, created = false });
-        var createdAt = DateTimeOffset.UtcNow.AddDays(-4);
-        var dueDate = BusinessToday().AddDays(-1);
-        var account = new Account
-        {
-            Id = id, Client = "Comercial Arce", Concept = "Cuenta ficticia para practicar seguimiento vencido",
-            OpeningBalanceCents = 350_000, BalanceCents = 350_000, AssignedTo = "lia", Revision = 2,
-            Contacts = [new Contact
-            {
-                Id = "CT-OVERDUE-001", AccountId = id, Sequence = 1, At = createdAt,
-                ActorId = "lia", Outcome = "CONNECTED", Disposition = "DATED_PROMISE", Note = "Se acordó una fecha de pago en esta simulación histórica."
-            }],
-            Promises = [new PaymentPromise
-            {
-                Id = "PR-OVERDUE-002", AccountId = id, Sequence = 2, AmountCents = 150_000,
-                CoveredCents = 0, DueDate = dueDate, Status = "PENDING", CreatedAt = createdAt.AddMinutes(10), ActorId = "lia"
-            }],
-            Events = [
-                new LedgerEvent
-                {
-                    Id = "EV-OVERDUE-001", AccountId = id, Sequence = 1, Type = "CONTACT", ActorId = "lia",
-                    ActorName = "Lía Torres", At = createdAt, Detail = "Contacto efectivo: se acordó una fecha de pago en esta simulación histórica."
-                },
-                new LedgerEvent
-                {
-                    Id = "EV-OVERDUE-002", AccountId = id, Sequence = 2, Type = "PROMISE", ActorId = "lia",
-                    ActorName = "Lía Torres", At = createdAt.AddMinutes(10), Detail = $"Registró promesa por {Money(150_000)} para {dueDate:yyyy-MM-dd}."
-                }
-            ]
-        };
-        db.Accounts.Add(account);
-        await db.SaveChangesAsync();
-        return Results.Ok(new { accountId = id, created = true });
-    });
-
     app.MapPost("/api/demo/reset", async (CarteraDb db) =>
     {
         await using var transaction = await db.Database.BeginTransactionAsync();
@@ -373,6 +335,7 @@ if (app.Environment.IsDevelopment())
         await db.Events.ExecuteDeleteAsync();
         await db.Accounts.ExecuteDeleteAsync();
         SeedData.AddAccounts(db);
+        db.Accounts.Add(CreateOverdueAccount());
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
         return Results.Ok(new { message = "Cartera de ejemplo reiniciada en SQL Server." });
@@ -407,11 +370,9 @@ static async Task InitializeDatabase(WebApplication app)
         try
         {
             await db.Database.MigrateAsync();
-            if (!await db.Accounts.AnyAsync())
-            {
-                SeedData.AddAccounts(db);
-                await db.SaveChangesAsync();
-            }
+            if (!await db.Accounts.AnyAsync()) SeedData.AddAccounts(db);
+            if (!await db.Accounts.AnyAsync(x => x.Id == "CC-107")) db.Accounts.Add(CreateOverdueAccount());
+            if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
             return;
         }
         catch (SqlException) when (attempt < 16)
@@ -420,6 +381,40 @@ static async Task InitializeDatabase(WebApplication app)
             await Task.Delay(TimeSpan.FromSeconds(3));
         }
     }
+}
+
+static Account CreateOverdueAccount()
+{
+    const string id = "CC-107";
+    var createdAt = DateTimeOffset.UtcNow.AddDays(-4);
+    var dueDate = BusinessToday().AddDays(-1);
+    return new Account
+    {
+        Id = id, Client = "Comercial Arce", Concept = "Cuenta ficticia para practicar seguimiento vencido",
+        OpeningBalanceCents = 350_000, BalanceCents = 350_000, AssignedTo = "lia", Revision = 2,
+        Contacts = [new Contact
+        {
+            Id = "CT-OVERDUE-001", AccountId = id, Sequence = 1, At = createdAt,
+            ActorId = "lia", Outcome = "CONNECTED", Disposition = "DATED_PROMISE", Note = "Se acordó una fecha de pago en esta simulación histórica."
+        }],
+        Promises = [new PaymentPromise
+        {
+            Id = "PR-OVERDUE-002", AccountId = id, Sequence = 2, AmountCents = 150_000,
+            CoveredCents = 0, DueDate = dueDate, Status = "PENDING", CreatedAt = createdAt.AddMinutes(10), ActorId = "lia"
+        }],
+        Events = [
+            new LedgerEvent
+            {
+                Id = "EV-OVERDUE-001", AccountId = id, Sequence = 1, Type = "CONTACT", ActorId = "lia",
+                ActorName = "Lía Torres", At = createdAt, Detail = "Contacto efectivo: se acordó una fecha de pago en esta simulación histórica."
+            },
+            new LedgerEvent
+            {
+                Id = "EV-OVERDUE-002", AccountId = id, Sequence = 2, Type = "PROMISE", ActorId = "lia",
+                ActorName = "Lía Torres", At = createdAt.AddMinutes(10), Detail = $"Registró promesa por {Money(150_000)} para {dueDate:yyyy-MM-dd}."
+            }
+        ]
+    };
 }
 
 static void RequireRole(Operator actor, string role)
