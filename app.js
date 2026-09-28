@@ -16,7 +16,6 @@ const caseList = document.getElementById("case-list");
 const previewDate = document.getElementById("preview-date");
 const useToday = document.getElementById("use-today");
 const resetDemo = document.getElementById("reset-demo");
-const prepareOverdue = document.getElementById("prepare-overdue");
 
 function money(cents) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(cents / 100);
@@ -237,8 +236,6 @@ function render() {
   useToday.hidden = !state.isDatePreview;
   resetDemo.disabled = Boolean(state.isDatePreview);
   resetDemo.hidden = !state.demoToolsEnabled;
-  prepareOverdue.hidden = !state.demoToolsEnabled;
-  prepareOverdue.disabled = Boolean(state.isDatePreview);
   const visibleAccounts = actor.role === "agent"
     ? state.accounts.filter((item) => item.assignedTo === actor.id)
     : actor.role === "finance"
@@ -468,27 +465,9 @@ app.addEventListener("submit", async (event) => {
   }
 });
 
-prepareOverdue.addEventListener("click", async () => {
-  if (state.isDatePreview || !state.demoToolsEnabled) return;
-  prepareOverdue.disabled = true;
-  try {
-    const result = await api("/api/demo/overdue-case", { method: "POST" });
-    roleKey = "lia";
-    roleSelect.value = roleKey;
-    simulatedAsOf = null;
-    await loadState(result.accountId);
-    flash(result.created
-      ? "Caso ficticio vencido preparado: puedes agendar la próxima gestión sin cambiar el reloj ni tus otras cuentas."
-      : "Abrí el caso ficticio vencido que ya estaba preparado.");
-  } catch (error) {
-    prepareOverdue.disabled = false;
-    flash(error.message, true);
-  }
-});
-
 resetDemo.addEventListener("click", async () => {
   if (state.isDatePreview) return;
-  if (!window.confirm("¿Borrar los movimientos de ejemplo y reiniciar las tres cuentas en SQL Server? Esto afecta a todos los roles de esta demo local.")) return;
+  if (!window.confirm("¿Borrar los movimientos de ejemplo y reiniciar las cuatro cuentas en SQL Server? Esto afecta a todos los roles de esta demo local.")) return;
   try {
     await api("/api/demo/reset", { method: "POST" });
     roleKey = "supervisor";

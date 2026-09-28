@@ -30,9 +30,10 @@ const health = await request("/api/health");
 assert.deepEqual(health, { status: 200, data: { status: "ok" } });
 
 const fresh = await state("supervisor");
-assert.equal(fresh.accounts.length, 3);
-assert.equal(fresh.version, 0, "La prueba requiere una base recién creada y sin movimientos.");
-assert.deepEqual(fresh.accounts.map((account) => account.balanceCents), [1_250_000, 780_000, 430_000]);
+assert.equal(fresh.accounts.length, 4);
+assert.equal(fresh.version, 2, "La prueba requiere una base recién creada, solo con el historial del caso vencido.");
+assert.deepEqual(fresh.accounts.map((account) => account.balanceCents), [1_250_000, 780_000, 430_000, 350_000]);
+assert.equal(fresh.accounts.find((account) => account.id === "CC-107").promises[0].isOverdue, true);
 
 await act("supervisor", "ASSIGN", "CC-104", { agentId: "lia" });
 await act("lia", "CONTACT", "CC-104", { outcome: "NO_ANSWER", note: "Sin respuesta en llamada de prueba" });
@@ -94,15 +95,10 @@ assert.equal(paid.balanceCents, 0);
 assert.equal(paid.promises[0].status, "FULFILLED");
 assert.equal((await state("marco", overdueDate)).accounts[0].promises.at(-1).isOverdue, false, "una promesa cumplida no vence");
 assert.equal(final.accounts.find((account) => account.id === "CC-106").balanceCents, 430_000);
-assert.deepEqual((await state("lia")).accounts.map((account) => account.id), ["CC-104"]);
+assert.deepEqual((await state("lia")).accounts.map((account) => account.id), ["CC-104", "CC-107"]);
 assert.deepEqual((await state("marco")).accounts.map((account) => account.id), ["CC-105"]);
-assert.deepEqual((await state("finance")).accounts.map((account) => account.id), ["CC-104", "CC-105"]);
+assert.deepEqual((await state("finance")).accounts.map((account) => account.id), ["CC-104", "CC-105", "CC-107"]);
 
-const sample = await request("/api/demo/overdue-case", "POST");
-assert.equal(sample.status, 200);
-assert.equal(sample.data.accountId, "CC-107");
-assert.equal(sample.data.created, true);
-assert.equal((await request("/api/demo/overdue-case", "POST")).data.created, false, "el caso de prueba no se duplica");
 const overdueAccount = (await state("lia")).accounts.find((item) => item.id === "CC-107");
 assert.equal(overdueAccount.promises[0].isOverdue, true);
 const originalDueDate = overdueAccount.promises[0].dueDate;
