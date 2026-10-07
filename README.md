@@ -1,14 +1,14 @@
-# Cartera Clara — primera vertical de cobranza
+# Cartera Clara — Operational Collections Demo
 
-Demo original de cobranza operativa para empresas ficticias. Enseña un ciclo concreto: **supervisor asigna una cuenta → agente registra contacto y su resultado → si hubo acuerdo, guarda monto y fecha opcional → finanzas confirma un abono → el saldo y el historial se actualizan**. La cartera de ejemplo contiene tres cuentas limpias y un cuarto expediente con una promesa vencida para practicar el seguimiento.
+Cartera Clara is an original collections workflow demo for fictional companies. It shows a concrete cycle: **a supervisor assigns an account → an agent records a contact and its outcome → if the customer makes a commitment, the agent records an amount and an optional date → finance confirms a payment → the balance and history update**. The sample portfolio contains three clean accounts and a fourth case with an overdue promise for practicing follow-up.
 
-No contiene código, datos, pantallas ni reglas de un empleador. No envía mensajes, no procesa pagos reales y no es una herramienta de cobranza lista para producción.
+It contains no code, data, screens, or rules from an employer. It does not send messages or process real payments, and it is not a production-ready collections system.
 
-## Ejecutar con SQL Server local
+## Run locally with SQL Server
 
-Requiere Node.js 20+, el SDK de .NET 10 y Docker Desktop con el motor en ejecución. El lanzador reconoce una instalación normal de `dotnet`; en este espacio de trabajo también puede usar el SDK local de `../.tools/dotnet`.
+Requirements: Node.js 20+, the .NET 10 SDK, and Docker Desktop with its engine running. The launcher recognizes a standard `dotnet` installation; in this workspace, it can also use the local SDK at `../.tools/dotnet`.
 
-Desde esta carpeta, en PowerShell:
+From this directory in PowerShell:
 
 ```powershell
 npm run db:setup
@@ -16,51 +16,51 @@ npm run db:up
 npm run dev
 ```
 
-Abrir `http://127.0.0.1:4173`. La primera ejecución aplica la migración y crea **tres cuentas ficticias limpias y un caso vencido** en SQL Server. La contraseña local se genera en `.env` y no debe subirse a Git. El botón «Reiniciar datos de ejemplo» borra los movimientos de esta base local y vuelve a crear los cuatro expedientes; solo está disponible en modo desarrollo. `npm run db:down` detiene el contenedor sin borrar su volumen.
+Open `http://127.0.0.1:4173`. The first run applies the migration and seeds **three clean fictional accounts and one overdue case** in SQL Server. A local password is generated in `.env` and must not be committed to Git. The **Reiniciar datos de ejemplo** button clears transactions from this local database and restores the four cases; it is available only in development mode. `npm run db:down` stops the container without deleting its volume.
 
-La conexión de desarrollo usa `Encrypt=False` **solo** en el puerto local `127.0.0.1`; no reutilices esa configuración para un servidor remoto. Si defines `ConnectionStrings__CarteraClara`, el lanzador respetará tu propia configuración de cifrado.
+The development connection uses `Encrypt=False` **only** on the local `127.0.0.1` port. Do not reuse that setting for a remote server. If you set `ConnectionStrings__CarteraClara`, the launcher respects your own encryption configuration.
 
-La versión anterior guardada en `localStorage` no se importa ni se borra: esta versión simplemente deja de leerla. Así podrás probar desde cero sin afectar el historial que quedó en tu navegador.
+Data from the earlier `localStorage` version is neither imported nor deleted: this version simply stops reading it. You can start fresh without affecting the history still stored in your browser.
 
-## Probar una promesa vencida sin cambiar el reloj
+## Try an overdue promise without changing the clock
 
-La fecha acordada debe ser futura si el cliente definió una. Para ver una promesa **con fecha** vencida en la demo, déjala pendiente o parcialmente cubierta, elige en «Simular fecha de consulta» un día posterior a su vencimiento y revisa la cuenta: aparecerán «Promesa vencida» y el importe aún no cubierto. En la propia fecha acordada todavía no se marca vencida; una promesa totalmente cubierta nunca se marca vencida. Un compromiso de monto **sin fecha** puede recibir abonos, pero no vence automáticamente.
+When the customer specifies a commitment date, that date must be in the future. To see a **dated** promise become overdue in the demo, leave it unpaid or partially paid, select a day after its due date under **Simular fecha de consulta**, and inspect the account. It will show **Promesa vencida** and the amount still outstanding. A promise is not overdue on its due date, and a fully paid promise never becomes overdue. An **undated** amount commitment can receive payments but does not become overdue automatically.
 
-Esa fecha es una **vista previa de solo lectura** por pestaña: el servidor calcula cómo se vería el vencimiento, pero no modifica su reloj, la fecha pactada, el saldo, la base de datos ni la bitácora. Mientras esté activa se bloquean los formularios; «Volver a hoy» restaura la operación normal. Cuando una promesa realmente vence, el agente puede registrar otro contacto de seguimiento y finanzas todavía puede registrar abonos contra la misma promesa.
+The selected date is a **read-only preview** for that browser tab. The server calculates how the overdue status would appear, but it does not change its clock, the commitment date, balances, database, or activity log. Forms are disabled while the preview is active; **Volver a hoy** restores normal operation. When a promise actually becomes overdue, the agent can record another follow-up contact, and finance can still apply payments to that promise.
 
-Para probar **agendar una nueva fecha de seguimiento** ahora mismo, pulsa «Volver a hoy» si estabas simulando una fecha, selecciona el expediente **CC-107 · Comercial Arce** y cambia a **Agente · Lía**. La promesa histórica de ese expediente ya está vencida. Selecciona una fecha futura en «Agendar próxima gestión». La fecha original prometida para pagar no cambia: la nueva fecha es solo para la siguiente gestión del agente, queda en la bitácora y puede reprogramarse. Si finanzas termina de cubrir la promesa, la agenda pendiente se cierra. En desarrollo local, «Reiniciar datos de ejemplo» restaura los cuatro expedientes.
+To try **scheduling a new follow-up date** right away, click **Volver a hoy** if you were previewing another date, select **CC-107 · Comercial Arce**, and switch to **Agente · Lía**. This case already has an overdue historical promise. Choose a future date under **Agendar próxima gestión**. The original promised payment date does not change: the new date is only for the agent's next follow-up, is recorded in the activity log, and can be rescheduled. If finance pays the promise in full, the pending follow-up closes. In local development, **Reiniciar datos de ejemplo** restores all four cases.
 
-Para verificar las reglas originales:
+To verify the original business rules:
 
 ```powershell
 npm test
 ```
 
-Con la API encendida y **solo si las tres cuentas originales siguen limpias y CC-107 conserva únicamente su historial inicial**, `npm run test:e2e` recorre un flujo real contra SQL Server. Deja los movimientos creados para que puedas revisarlos en la interfaz; si deseas repetirlo, usa antes «Reiniciar datos de ejemplo».
+With the API running, `npm run test:e2e` exercises a real workflow against SQL Server **only if the three original accounts remain clean and CC-107 still has only its initial history**. It leaves the resulting transactions in place so you can inspect them in the UI. Use **Reiniciar datos de ejemplo** before running it again.
 
-## Roles de la demo
+## Demo roles
 
-- **Supervisor:** asigna una cuenta a Lía o Marco, antes de que empiece el contacto.
-- **Agente asignado:** clasifica el cierre de cada contacto efectivo. Si hay acuerdo de monto, lo guarda junto con el contacto, con fecha o sin ella. Si más tarde acuerdan una fecha, la agrega al mismo compromiso. También puede cerrar una gestión como «requiere seguimiento» o «sin acuerdo», sin crear una promesa ficticia.
-- **Promesa vencida:** se detecta al consultar una fecha posterior al vencimiento si aún falta cubrir parte del importe. Es un estado calculado, no un cambio automático del acuerdo guardado.
-- **Finanzas:** solo ve cuentas ya asignadas. Confirma abonos para una cuenta identificada con una referencia única; los abonos reducen el saldo y pueden completar una promesa.
+- **Supervisor:** assigns an account to Lía or Marco before contact begins.
+- **Assigned agent:** classifies the outcome of each completed contact. If a payment amount is agreed, the agent records it with the contact, with or without a date. If a date is agreed later, it is added to the same commitment. The agent can also close a contact as **requiere seguimiento** (follow-up needed) or **sin acuerdo** (no agreement), without inventing a promise.
+- **Overdue promise:** calculated when the selected date is after the due date and some of the committed amount remains unpaid. It is a derived status, not an automatic change to the stored agreement.
+- **Finance:** sees only assigned accounts. It confirms payments for an identified account using a unique reference; payments reduce the balance and may fulfill a promise.
 
-El selector de rol es solo para recorrer la demo. No es autenticación real: cualquiera con acceso a la demo puede elegir un rol. La API vuelve a validar las reglas, además de ocultar controles no permitidos en la interfaz.
+The role selector exists only to explore the demo. It is not real authentication: anyone with access can select a role. The API validates the business rules again, in addition to hiding unavailable controls in the UI.
 
-## Límites de la demo pública
+## Public demo limits
 
-En un despliegue fuera de desarrollo, la API permite como máximo 30 solicitudes por minuto por dirección IP observada por el servidor y 1,000 solicitudes a `/api` por día entre todos los visitantes. Al alcanzar el límite responde HTTP 429 sin consultar ni modificar SQL. Los archivos estáticos y `/api/health` no consumen el contador de SQL; la ruta de salud solo confirma que el proceso responde, **no** que la base está disponible. En desarrollo local estos límites no estorban las pruebas.
+Outside development mode, the API allows at most 30 requests per minute per IP address observed by the server and 1,000 requests to `/api` per day across all visitors. Once a limit is reached, it returns HTTP 429 without reading or changing SQL data. Static files and `/api/health` do not consume the daily API counter. The health endpoint confirms only that the process responds, **not** that the database is available. These limits do not interfere with local development tests.
 
-Los contadores viven en memoria: se reinician cuando la aplicación se reinicia y no son una garantía absoluta contra abuso ni un límite de facturación. Además, detrás de un proxy, varios visitantes podrían compartir la IP que observa la aplicación. La demo sigue siendo abierta y compartida: cualquiera puede cambiar las **cuentas ficticias**; nunca cargues información real. Para evitar cargos de nube, el despliegue debe usar exclusivamente un plan gratuito de aplicación y la oferta gratuita de Azure SQL con la opción **Auto-pause the database until next month** cuando se agote su cuota. Si alguna de esas opciones no aparece claramente como gratuita, detener la creación y revisar antes de confirmar. Un presupuesto de Azure solo alerta: no detiene el consumo.
+The counters live in memory: they reset when the application restarts and are neither an absolute defense against abuse nor a billing cap. Behind a proxy, several visitors may also share the IP address observed by the application. The demo is open and shared, so anyone can change its **fictional accounts**; never enter real information. To avoid cloud charges, the deployment should use only a free application plan and the Azure SQL free offer with **Auto-pause the database until next month** selected when its allowance is exhausted. If either option is not clearly shown as free, stop and review the configuration before confirming. An Azure budget sends alerts; it does not stop usage.
 
-## Qué persiste y qué sigue fuera
+## Persistence and out-of-scope features
 
-La API ASP.NET Core guarda cuentas, contactos, promesas, abonos y bitácora en tablas relacionadas. La migración inicial está en `api/Migrations`. Cada operación actualiza el expediente y la bitácora en una sola transacción; SQL Server impide referencias de abono duplicadas y su `rowversion` detecta cambios simultáneos en la misma cuenta. Los importes se guardan como centavos enteros.
+The ASP.NET Core API stores accounts, contacts, promises, payments, and activity history in related tables. The initial migration is in `api/Migrations`. Each operation updates the account and its activity history in one transaction; SQL Server prevents duplicate payment references, and its `rowversion` detects concurrent changes to the same account. Monetary amounts are stored as integer cents.
 
-Faltan autenticación real, pagos reales, comunicaciones con clientes, intereses moratorios, reglas legales de contacto y automatización de rutas. Por eso **no es una herramienta de cobranza lista para producción**. La demo pública usa un plan gratuito de App Service y la oferta gratuita de Azure SQL; cambiar esas opciones puede generar cargos.
+Real authentication, real payments, customer communications, late-payment interest, legal contact rules, and automated routing are out of scope. Therefore, **this is not a production-ready collections system**. The public demo uses a free App Service plan and the Azure SQL free offer; changing those options may incur charges.
 
-La elección de base y sus alternativas están explicadas en [DATABASE_DECISION.md](./DATABASE_DECISION.md).
+The database choice and alternatives are explained in [DATABASE_DECISION.md](./DATABASE_DECISION.md) (currently in Spanish).
 
-## Publicación del proyecto
+## Project deployment
 
-Este repositorio contiene la demo y sus instrucciones de ejecución local. La contraseña del SQL Server local vive en `.env`, que está excluido de Git. El despliegue público configura `ConnectionStrings__CarteraClara` en App Service y usa su identidad administrada para entrar a Azure SQL sin contraseña; GitHub Actions publica mediante otra identidad con OIDC. No se debe publicar ninguna credencial ni exponer el puerto local de Docker. El selector de roles de la demo **no es autenticación**, por lo que el sitio debe presentarse como muestra interactiva con datos ficticios, nunca como sistema de cobranza real.
+This repository contains the demo and its local setup instructions. The local SQL Server password lives in `.env`, which is excluded from Git. The public deployment configures `ConnectionStrings__CarteraClara` in App Service and uses its managed identity to access Azure SQL without a password; GitHub Actions deploys through a separate identity using OIDC. Do not publish credentials or expose the local Docker port. The demo's role selector **is not authentication**, so present the site as an interactive sample with fictional data, never as a real collections system.
